@@ -1,0 +1,166 @@
+﻿@page "/"
+@attribute [StreamRendering]
+@rendermode InteractiveServer
+
+<PageTitle>Home</PageTitle>
+
+
+<h1>Star Wars DnD</h1>
+
+<br>
+
+<p><em>Current Dice Number: @numberSidedDice</em></p>
+<label for="diceNumber">Sided Dice Number:</label>
+<input type="number" id="diceNumber" name="diceNumber" placeholder="20"
+       value="@numberSidedDiceTemp" bind="@numberSidedDiceTemp" @oninput="(EventArgs) => {setDiceNumberTemp(EventArgs.Value.ToString());}">
+<br>
+<button class="btn btn-primary" @onclick="() => setDiceNumber(numberSidedDiceTemp)">Change Dice</button>
+
+<br>
+
+<button class="btn btn-primary" @onclick="() => rollAllPlayers(mainPlayers)">Roll All</button>
+
+<br>
+
+<br>
+
+<br>
+<br>
+
+@if (mainPlayers == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Player Name</th>
+                <th>Character Name</th>
+                <th>Hit Points</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var mainPlayer in mainPlayers)
+            {
+                <tr>
+                    <td style="color:@textColor(@mainPlayer);">@mainPlayer.getName()</td>
+                    <td style="color:@textColor(@mainPlayer);">@mainPlayer.getCharacterName()</td>
+                    <td style="color:@textColor(@mainPlayer);">@mainPlayer.getHitPoints()</td>
+                </tr>
+                <tr>
+                    <td><button class="btn btn-primary" @onclick="() => damagePlayerByOne(mainPlayer)">Damage -1</button></td>
+                    <td><button class="btn btn-primary" @onclick="() => healPlayerByOne(mainPlayer)">Heal +1</button></td>
+                </tr>
+                <tr>
+                    <td><button class="btn btn-primary" @onclick="() => rollDice(mainPlayer)">Roll a D20</button></td>
+                    <td><p role="status">@mainPlayer.getName() rolled a: @mainPlayer.getRollNumber()</p></td>
+                </tr>
+                <tr>
+                    <td>
+                        <label class="switch">
+                            <input type="checkbox" checked @onclick="() => toggleRollAllForPlayer(mainPlayer)">
+                            <span class="slider round"></span>
+                        </label>
+                    </td>
+                </tr>
+               
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+
+    private List<PlayerData> mainPlayers;
+
+    private int numberSidedDiceTemp = 20;
+    private int numberSidedDice = 20;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        // Simulate asynchronous loading to demonstrate streaming rendering
+        await Task.Delay(500);
+
+        mainPlayers = PlayerDataRepository.getPlayers();
+    }
+
+    private void setDiceNumberTemp(string Value)
+    {
+        try
+        {
+            numberSidedDiceTemp = int.Parse(Value);
+        }
+        catch
+        {
+            // catch error
+        }
+    }
+
+
+    private void setDiceNumber(int diceNumber)
+    {
+        numberSidedDice = diceNumber;
+    }
+
+    private void rollDice(PlayerData player)
+    {
+        Random rnd = new Random();
+        int diceNumber = rnd.Next(1, numberSidedDice + 1);
+
+        player.setRollNumber(diceNumber);
+    }
+
+    private void toggleRollAllForPlayer(PlayerData player)
+    {
+        player.setRollAll(!player.isRollAll());
+    }
+
+    private void rollAllPlayers(List<PlayerData> mainPlayers)
+    {
+        foreach (PlayerData player in mainPlayers)
+        {
+            if (player.isRollAll())
+            {
+                rollDice(player);
+            }
+        }
+    }
+
+    private void damagePlayerByOne(PlayerData player)
+    {
+        player.setHitPoints(player.getHitPoints() - 1);
+    }
+
+    private void healPlayerByOne(PlayerData player)
+    {
+        player.setHitPoints(player.getHitPoints() + 1);
+    }
+
+    private string textColor(PlayerData player)
+    {
+
+        decimal baseHp = player.getBaseHitPoints();
+        decimal currentHp = player.getHitPoints();
+
+        string textColor = "#000000";
+
+        if (currentHp > Math.Ceiling(baseHp / 4))
+        {
+            textColor = "#000000";
+        } 
+        else if (currentHp <= 0)
+        {
+            textColor = "#A0AFB7";
+        }
+        else if (currentHp <= Math.Ceiling(baseHp / 4) && currentHp > 0)
+        {
+            textColor = "#FF0000";
+        } 
+
+        return textColor;
+    }
+
+}
